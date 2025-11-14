@@ -17,13 +17,20 @@
       color:#eaf1ff;
       text-align:center;
     }
-    #msg{font-weight:700;letter-spacing:.02em;line-height:1.6;white-space:pre-wrap;}
+    #msg{
+      font-weight:700;
+      letter-spacing:.02em;
+      line-height:1.6;
+      white-space:pre-wrap;
+    }
   </style>
 </head>
 <body>
-  <div id="msg">LIFF起動中です...</div>
+  <!-- 画面上は常に「打刻中です...」だけ（エラー時だけ書き換え） -->
+  <div id="msg">打刻中です...</div>
+
   <script>
-    const LIFF_ID = "2008492790-G7D81DrV"; // ←そのままでOK（自分のID）
+    const LIFF_ID = "2008492790-G7D81DrV"; // そのまま
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxj4PuYcTBiBmZxE3oPOIyobVp8w6qNIOUWeWbobZUJOBQQP-6jnZNCdSopVUFs5R3wEg/exec";
 
     const msgEl = document.getElementById("msg");
@@ -47,17 +54,16 @@
 
     (async function main(){
       try{
-        show("LIFF 初期化中...");
+        // 見た目は最初から最後まで「打刻中です...」
+        show("打刻中です...");
 
         await liff.init({ liffId: LIFF_ID });
 
-        show("ログイン状態を確認中...");
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
         }
 
-        show("打刻モード確認中...");
         const mode = getMode();
         if (!mode) {
           show("⚠️ mode指定がありません。\n?mode=in または ?mode=out を付けて起動してください。");
@@ -68,15 +74,8 @@
           return;
         }
 
-        show("プロフィール取得中...");
         const profile = await liff.getProfile();
         const userId = profile.userId;
-
-        show(
-          "打刻送信中...\n" +
-          "mode: " + mode + "\n" +
-          "userId: " + userId
-        );
 
         const endpoint =
           `${GAS_URL}?mode=${encodeURIComponent(mode)}&uid=${encodeURIComponent(userId)}`;
@@ -86,27 +85,16 @@
         try {
           await fetch(endpoint, {
             method: "GET",
-            mode: "no-cors",   // CORS を気にせず投げる
+            mode: "no-cors",   // 元の挙動のまま
             cache: "no-store",
           });
         } catch (err) {
-          // ここに来るのは「本当に接続できなかった」時だけ
+          // 本当に接続できなかったときだけエラー表示
           show("⚠️ ネットワークエラーっぽいです\nmessage: " + err.message);
           return;
         }
         
-        // ここまで来たら「リクエストは送れた」とみなす
-        show("打刻リクエストを送信しました。\nシートに記録されたかは後で確認してください。");
-        
-        // 実運用ならすぐ閉じる
-        setTimeout(() => {
-          liff.closeWindow();
-        }, 800);
-        
-        return; // ここで終了
-
-
-        // 実運用ではこれに戻す：
+        // リクエスト送信に成功したらそのまま閉じる（2個目のコードと同じ雰囲気）
         liff.closeWindow();
 
       }catch(err){
